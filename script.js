@@ -2463,7 +2463,6 @@ function setupDragAndDrop() {
 
                             link.addEventListener('click', (e) => {
                                 e.preventDefault();
-                                const content = file.content;
                                 console.log("Arquivo lido", content);
                             });
 
