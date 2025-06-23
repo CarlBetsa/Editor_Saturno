@@ -2398,7 +2398,11 @@ function setupDragAndDrop() {
         let repoLoaded = false;
         let repoVisible = false;
 
+        let canToggleRepo = true;
         repoItem.addEventListener('click', () => {
+            if (!canToggleRepo) return; //Impede multiplos cliques
+            canToggleRepo = false;
+
             if (!repoLoaded) {
                 loadRepositoryFiles();
             } else {
@@ -2406,6 +2410,10 @@ function setupDragAndDrop() {
                 repoList.style.display = repoVisible ? 'block' : 'none';
                 repoIcon.className = repoVisible ? 'fa-regular fa-folder-open' : 'fa-regular fa-folder';
             }
+
+            setTimeout(() => {
+                canToggleRepo = true;
+            }, 300);
         });
 
         async function loadRepositoryFiles() {
@@ -2451,6 +2459,12 @@ function setupDragAndDrop() {
                             link.addEventListener('dragstart', (e) => {
                                 e.dataTransfer.setData('application/json', content);
                                 e.dataTransfer.setData('text/plain', fileName);
+                            });
+
+                            link.addEventListener('click', (e) => {
+                                e.preventDefault();
+                                const content = file.content;
+                                console.log("Arquivo lido", content);
                             });
 
                             li.appendChild(archiveType);
