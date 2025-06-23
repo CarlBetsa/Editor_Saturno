@@ -2398,13 +2398,13 @@ function setupDragAndDrop() {
 
         async function loadRepositoryFiles() {
             try {
-                const response = await fetch('https://thiagothimotti.github.io/Sons_da_Saturno/fileList.json');
+                const response = await fetch('https://raw.githubusercontent.com/CarlBetsa/Editor_Saturno/main/Sons_da_Saturno/fileList.json');
                 if (!response.ok) throw new Error('Falha ao carregar lista de arquivos do repositório.');
 
                 const fileNames = await response.json();
 
                 fileNames.forEach(fileName => {
-                    const fileUrl = `https://thiagothimotti.github.io/assets/${fileName}`;
+                    const fileUrl = `https://raw.githubusercontent.com/CarlBetsa/Editor_Saturno/main/Sons_da_Saturno/${fileName}`;
 
                     fetch(fileUrl)
                         .then(response => response.text())
