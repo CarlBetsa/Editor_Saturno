@@ -2364,7 +2364,7 @@ function setupDragAndDrop() {
     function renderFileList() {
         fileList.innerHTML = '';
 
-        // Cria o item especial de acesso ao repositório
+        // Cria item da pasta do repositório
         const repoItem = document.createElement('li');
         repoItem.style.display = 'inline-flex';
         repoItem.style.alignItems = 'center';
@@ -2374,26 +2374,38 @@ function setupDragAndDrop() {
         repoItem.style.marginBottom = '8px';
         repoItem.style.width = '241px';
 
-        // Ícone ou texto de acesso
         const repoIcon = document.createElement('i');
         repoIcon.className = 'fa-regular fa-folder';
         repoIcon.style.fontSize = '21px';
         repoIcon.style.padding = '3px';
 
-        // Texto clicável
         const repoText = document.createElement('span');
         repoText.textContent = 'Saturn original presets';
         repoText.style.textDecoration = 'underline';
         repoText.style.marginRight = '25px';
-        repoText.style.fontSize = '14px'
+        repoText.style.fontSize = '14px';
 
         repoItem.appendChild(repoIcon);
         repoItem.appendChild(repoText);
         fileList.appendChild(repoItem);
 
-        // Ação de clique
+        const repoList = document.createElement('ul');
+        repoList.style.listStyle = 'none';
+        repoList.style.paddingLeft = '20px';
+        repoList.style.display = 'none';
+        fileList.appendChild(repoList);
+
+        let repoLoaded = false;
+        let repoVisible = false;
+
         repoItem.addEventListener('click', () => {
-            loadRepositoryFiles();
+            if (!repoLoaded) {
+                loadRepositoryFiles();
+            } else {
+                repoVisible = !repoVisible;
+                repoList.style.display = repoVisible ? 'block' : 'none';
+                repoIcon.className = repoVisible ? 'fa-regular fa-folder-open' : 'fa-regular fa-folder';
+            }
         });
 
         async function loadRepositoryFiles() {
@@ -2409,32 +2421,66 @@ function setupDragAndDrop() {
                     fetch(fileUrl)
                         .then(response => response.text())
                         .then(content => {
-                            localStorage.setItem(`cachedFile_${fileName}`, content);
-                            addFileToList(fileName, content);
+                            const li = document.createElement('li');
+                            li.style.display = 'flex';
+                            li.style.justifyContent = 'space-between';
+                            li.style.alignItems = 'center';
+                            li.style.gap = '10px';
+
+                            const archiveType = document.createElement('button');
+                            archiveType.textContent = fileName.toLowerCase().includes('backup') ? 'BKP' : 'PRST';
+                            archiveType.style.padding = "2px 6px";
+                            archiveType.style.fontSize = "10px";
+                            archiveType.style.borderRadius = "4px";
+                            archiveType.style.border = fileName.toLowerCase().includes('backup') ? "1px solid red" : `1px solid ${saveBlue}`;
+                            archiveType.style.background = "transparent";
+                            archiveType.style.color = fileName.toLowerCase().includes('backup') ? "red" : saveBlue;
+                            archiveType.style.cursor = "default";
+                            archiveType.style.minWidth = "40px";
+                            archiveType.style.maxWidth = "40px";
+
+                            const link = document.createElement('a');
+                            link.title = fileName;
+                            const blob = new Blob([content], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            link.href = url;
+                            link.download = fileName;
+                            link.textContent = fileName.replace(/\.(json|stnpreset)$/i, '');
+                            link.draggable = true;
+
+                            link.addEventListener('dragstart', (e) => {
+                                e.dataTransfer.setData('application/json', content);
+                                e.dataTransfer.setData('text/plain', fileName);
+                            });
+
+                            li.appendChild(archiveType);
+                            li.appendChild(link);
+                            repoList.appendChild(li);
                         })
                         .catch(() => console.error(`Falha ao carregar ${fileName}`));
                 });
+
+                repoLoaded = true;
+                repoVisible = true;
+                repoList.style.display = 'block';
+                repoIcon.className = 'fa-regular fa-folder-open';
             } catch (error) {
                 console.error(error);
             }
         }
 
+        // Arquivos locais do cache
+        const presets = fileDataList.filter(f => !f.name.toLowerCase().includes('backup')).sort((a, b) => {
+            const nameA = a.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+            const nameB = b.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
 
-        const presets = fileDataList
-            .filter(f => !f.name.toLowerCase().includes('backup'))
-            .sort((a, b) => {
-                const nameA = a.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
-                const nameB = b.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
-                return nameA.localeCompare(nameB);
-            });
-
-        const backups = fileDataList
-            .filter(f => f.name.toLowerCase().includes('backup'))
-            .sort((a, b) => {
-                const nameA = a.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
-                const nameB = b.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
-                return nameA.localeCompare(nameB);
-            });
+        const backups = fileDataList.filter(f => f.name.toLowerCase().includes('backup')).sort((a, b) => {
+            const nameA = a.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+            const nameB = b.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+            return nameA.localeCompare(nameB);
+        });
 
         const sortedList = [...presets, ...backups];
 
@@ -2452,11 +2498,10 @@ function setupDragAndDrop() {
             archiveType.style.borderRadius = "4px";
             archiveType.style.border = file.name.toLowerCase().includes('backup') ? "1px solid red" : `1px solid ${saveBlue}`;
             archiveType.style.background = "transparent";
-            archiveType.style.color = file.name.toLowerCase().includes('backup') ? "red" : saveBlue;;
+            archiveType.style.color = file.name.toLowerCase().includes('backup') ? "red" : saveBlue;
             archiveType.style.cursor = "default";
             archiveType.style.minWidth = "40px";
             archiveType.style.maxWidth = "40px";
-            archiveType.dataset.pressed = "false";
 
             const link = document.createElement('a');
             link.title = file.name;
