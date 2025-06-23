@@ -2337,14 +2337,18 @@ async function heartBeat() {
 }
 
 function setupDragAndDrop() {
+    //const saveBlue = "rgb(0, 130, 255)";
+    const saveBlue = "#53bfeb";
     const dropzone = document.getElementById('dropzone');
     const fileList = document.getElementById('file-list');
     const fileInput = document.getElementById('file-input');
     const fileSelectButton = document.getElementById('file-select-button');
     const dropzoneText = document.getElementById('dropzone-text');
 
+    const fileDataList = []; // Array de { name, content }
+
     function toggleDropzoneText() {
-        dropzoneText.style.display = fileList.children.length > 0 ? 'none' : 'block';
+        dropzoneText.style.display = fileDataList.length > 0 ? 'none' : 'block';
     }
 
     function isValidFileType(fileName) {
@@ -2353,52 +2357,149 @@ function setupDragAndDrop() {
     }
 
     function addFileToList(name, content) {
-        const li = document.createElement('li');
-        li.style.display = 'flex';
-        li.style.justifyContent = 'space-between';
-        li.style.alignItems = 'center';
-        li.style.gap = '10px';
+        fileDataList.push({ name, content });
+        renderFileList();
+    }
 
-        const link = document.createElement('a');
-        link.title = name;
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = name;
-        link.textContent = name.replace(/\.(json|stnpreset)$/i, '');
-        link.draggable = true;
+    function renderFileList() {
+        fileList.innerHTML = '';
 
-        link.addEventListener('dragstart', (e) => {
-            const content = localStorage.getItem(`cachedFile_${name}`);
-            e.dataTransfer.setData('application/json', content);
-            e.dataTransfer.setData('text/plain', name);
+        // Cria o item especial de acesso ao repositório
+        const repoItem = document.createElement('li');
+        repoItem.style.display = 'inline-flex';
+        repoItem.style.alignItems = 'center';
+        repoItem.style.cursor = 'pointer';
+        repoItem.style.color = saveBlue;
+        repoItem.style.fontWeight = 'bold';
+        repoItem.style.marginBottom = '8px';
+        repoItem.style.width = '241px';
+
+        // Ícone ou texto de acesso
+        const repoIcon = document.createElement('i');
+        repoIcon.className = 'fa-regular fa-folder';
+        repoIcon.style.fontSize = '21px';
+        repoIcon.style.padding = '3px';
+
+        // Texto clicável
+        const repoText = document.createElement('span');
+        repoText.textContent = 'Saturn original presets';
+        repoText.style.textDecoration = 'underline';
+        repoText.style.marginRight = '25px';
+        repoText.style.fontSize = '14px'
+
+        repoItem.appendChild(repoIcon);
+        repoItem.appendChild(repoText);
+        fileList.appendChild(repoItem);
+
+        // Ação de clique
+        repoItem.addEventListener('click', () => {
+            loadRepositoryFiles();
         });
 
-        const removeBtn = document.createElement('button');
-        removeBtn.textContent = '❌';
-        removeBtn.style.background = 'transparent';
-        removeBtn.style.border = 'none';
-        removeBtn.style.color = 'red';
-        removeBtn.style.cursor = 'pointer';
-        removeBtn.title = 'Remove File';
-        removeBtn.style.marginBottom = '10px';
+        async function loadRepositoryFiles() {
+            try {
+                const response = await fetch('https://thiagothimotti.github.io/Sons_da_Saturno/fileList.json');
+                if (!response.ok) throw new Error('Falha ao carregar lista de arquivos do repositório.');
 
-        removeBtn.onclick = () => {
-            localStorage.removeItem(`cachedFile_${name}`);
-            li.classList.add('fade-out');
-            setTimeout(() => {
-                li.remove();
+                const fileNames = await response.json();
+
+                fileNames.forEach(fileName => {
+                    const fileUrl = `https://thiagothimotti.github.io/assets/${fileName}`;
+
+                    fetch(fileUrl)
+                        .then(response => response.text())
+                        .then(content => {
+                            localStorage.setItem(`cachedFile_${fileName}`, content);
+                            addFileToList(fileName, content);
+                        })
+                        .catch(() => console.error(`Falha ao carregar ${fileName}`));
+                });
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+
+        const presets = fileDataList
+            .filter(f => !f.name.toLowerCase().includes('backup'))
+            .sort((a, b) => {
+                const nameA = a.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+                const nameB = b.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+
+        const backups = fileDataList
+            .filter(f => f.name.toLowerCase().includes('backup'))
+            .sort((a, b) => {
+                const nameA = a.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+                const nameB = b.name.replace(/\.(json|stnpreset)$/i, '').toLowerCase();
+                return nameA.localeCompare(nameB);
+            });
+
+        const sortedList = [...presets, ...backups];
+
+        sortedList.forEach(file => {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.gap = '10px';
+
+            const archiveType = document.createElement('button');
+            archiveType.textContent = file.name.toLowerCase().includes('backup') ? 'BKP' : 'PRST';
+            archiveType.style.padding = "2px 6px";
+            archiveType.style.fontSize = "10px";
+            archiveType.style.borderRadius = "4px";
+            archiveType.style.border = file.name.toLowerCase().includes('backup') ? "1px solid red" : `1px solid ${saveBlue}`;
+            archiveType.style.background = "transparent";
+            archiveType.style.color = file.name.toLowerCase().includes('backup') ? "red" : saveBlue;;
+            archiveType.style.cursor = "default";
+            archiveType.style.minWidth = "40px";
+            archiveType.style.maxWidth = "40px";
+            archiveType.dataset.pressed = "false";
+
+            const link = document.createElement('a');
+            link.title = file.name;
+            const blob = new Blob([file.content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = file.name;
+            link.textContent = file.name.replace(/\.(json|stnpreset)$/i, '');
+            link.draggable = true;
+
+            link.addEventListener('dragstart', (e) => {
+                const content = localStorage.getItem(`cachedFile_${file.name}`);
+                e.dataTransfer.setData('application/json', content);
+                e.dataTransfer.setData('text/plain', file.name);
+            });
+
+            const removeBtn = document.createElement('button');
+            removeBtn.textContent = '❌';
+            removeBtn.style.background = 'transparent';
+            removeBtn.style.border = 'none';
+            removeBtn.style.color = 'red';
+            removeBtn.style.fontSize = "14px";
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.title = 'Remove File';
+            removeBtn.style.marginBottom = '2px';
+
+            removeBtn.onclick = () => {
+                localStorage.removeItem(`cachedFile_${file.name}`);
+                const index = fileDataList.findIndex(f => f.name === file.name);
+                if (index !== -1) fileDataList.splice(index, 1);
+                renderFileList();
                 URL.revokeObjectURL(url);
                 toggleDropzoneText();
-            }, 200);
-        };
+            };
 
-        li.appendChild(link);
-        li.appendChild(removeBtn);
-        fileList.appendChild(li);
+            li.appendChild(archiveType);
+            li.appendChild(link);
+            li.appendChild(removeBtn);
+            fileList.appendChild(li);
+        });
+
         toggleDropzoneText();
     }
-    window.addFileToList = addFileToList;
 
     fileSelectButton.addEventListener('click', () => {
         fileInput.click();
@@ -2424,14 +2525,14 @@ function setupDragAndDrop() {
     });
 
     // Restaura arquivos do cache
-    fileList.innerHTML = '';
     Object.keys(localStorage).forEach((key) => {
         if (key.startsWith('cachedFile_')) {
             const fileName = key.replace('cachedFile_', '');
             const content = localStorage.getItem(key);
-            addFileToList(fileName, content);
+            fileDataList.push({ name: fileName, content });
         }
     });
+    renderFileList();
 
     // Drag and drop
     window.addEventListener('dragover', e => e.preventDefault());
