@@ -1,5 +1,3 @@
-const { SamBA, Device, Flasher } = window.bossa;
-
 let midiAccess;
 
 let lastMessage = [];
@@ -62,13 +60,9 @@ let deviceVersion;
 let versions;
 let latestVersion;
 let ignorarDesconexao = false;
-let nomeControladora = "timespace"
-updateDevice()
 
 // Função base da inicialização do site
 async function initializeSite() {
-
-    updateDevice()
 
     nomeControladora = null;
 
@@ -1036,7 +1030,7 @@ async function patchChange(letter, j) {
     }
 }
     //'https://editor.saturnopedais.com.br/Sons_da_Saturno/fileList.json'
-//let nomeControladora = null
+let nomeControladora = null
 async function setupMidiListener() {
     try {
         if (!midiAccess)
@@ -3365,96 +3359,60 @@ function generateBackup() {
 }
 
 async function updateDevice() {
-    //if (!precisaAtualizar) return;
+    if (precisaAtualizar){
+        const deviceNameFormatted = nomeControladora.charAt(0).toUpperCase() + nomeControladora.slice(1);
+        const latestVersionText = formatVersion(latestVersion);
+        const currentVersionText = formatVersion(deviceVersion);
 
-    const deviceNameFormatted = nomeControladora.charAt(0).toUpperCase() + nomeControladora.slice(1);
-    const latestVersionText = "3.3.3"//formatVersion(latestVersion);
-    const currentVersionText = "3.2.3"//formatVersion(deviceVersion);
-
-    function formatVersion(versionArray) {
-        const letters = ["", "a", "b", "c", "d"];
-        const [major, minor, patch, build] = versionArray;
-        let text = `${major}.${minor}.${patch}`;
-        if (build > 0 && build <= 4) {
-            text += letters[build];
+        function formatVersion(versionArray) {
+            const letters = ["", "a", "b", "c", "d"]; // índice 0 vazio
+            const [major, minor, patch, build] = versionArray;
+            let text = `${major}.${minor}.${patch}`;
+            if (build > 0 && build <= 4) {
+                text += letters[build];
+            }
+            return text;
         }
-        return text;
-    }
 
-    const result = await Swal.fire({
-        title: "Update available",
-        text: `You have version ${currentVersionText}, latest is ${latestVersionText} for ${deviceNameFormatted}. Do you want to update now?`,
-        icon: "question",
-        background: "#2a2a40",
-        color: "white",
-        width: "500px",
-        showCancelButton: true,
-        confirmButtonText: "Yes, update",
-        cancelButtonText: "Cancel",
-        cancelButtonColor: "red",
-        confirmButtonColor: "#53bfeb"
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-        // Pausa o heartbeat e informa que a desconexão é controlada
-        if (intervalId) {
-            clearInterval(intervalId);
-            intervalId = null;
-        }
-        ignorarDesconexao = true;
-
-        // Passo 1: abre/fecha a porta a 1200bps (reset para bootloader)
-        const port = await navigator.serial.requestPort();
-        await port.open({ baudRate: 1200 });
-        await port.close();
-        console.log("Serial aberta e fechada em 1200bps com sucesso.");
-
-        // Passo 2: aguarda o dispositivo reiniciar no modo bootloader
-        await new Promise(r => setTimeout(r, 1000));
-
-        // Passo 3: seleciona novamente a porta (agora deve estar em bootloader)
-        const bootloaderPort = await navigator.serial.requestPort();
-
-        // Passo 4: conecta com SamBA
-        const logger = {
-            log: (...args) => console.log(...args),
-            debug: (...args) => console.debug(...args)
-        };
-
-        const samba = new SamBA(bootloaderPort, {
-            logger,
-            debug: true
+        const result = await Swal.fire({
+            title: "Update available",
+            text: `You have version ${currentVersionText}, latest is ${latestVersionText} for ${deviceNameFormatted}. Do you want to update now?`,
+            icon: "question",
+            background: "#2a2a40",
+            color: "white",
+            width: "500px",
+            showCancelButton: true,
+            confirmButtonText: "Yes, update",
+            cancelButtonText: "Cancel",
+            cancelButtonColor: "red",
+            confirmButtonColor: "#53bfeb"
         });
-
-        await samba.connect(1000);
-
-        // Passo 5: cria o device
-        const dev = new Device(samba);
-        await dev.create();
-
-        console.log("Conectado ao bootloader:", dev);
-        console.log("Flash info:", dev.flash);
-
-        // Passo 6: baixa o firmware
-        const response = await fetch("https://editor.saturnopedais.com.br/bins/TimeSpaceTela.bin");
-        const firmwareArrayBuffer = await response.arrayBuffer();
-        const firmwareBytes = new Uint8Array(firmwareArrayBuffer);
-
-        console.log("Firmware carregado:", firmwareBytes.length, "bytes");
-
-        // Passo 7: flash
         
-        
-        /*Swal.fire("Success", "Device updated successfully!", "success");*/
+        if (!result.isConfirmed) return;
 
-    } catch (err) {
-        console.error("Erro no update:", err);
-        Swal.fire("Error", "Update failed: " + err.message, "error");
-    } finally {
-        //ignorarDesconexao = false;
+        try {
+            // Pausa o heartbeat e informa que a desconexão é controlada
+            if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+            }
+            ignorarDesconexao = true;
+
+            // Abre e fecha a serial a 1200bps para iniciar o bootloader
+            const port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 1200 });
+            await port.close();
+            console.log("Serial aberta e fechada em 1200bps com sucesso.");
+            //ignorarDesconexao = false;
+
+        } catch (err) {
+            console.error("Erro ao abrir/fechar a serial:", err);
+            //ignorarDesconexao = false;
+        }
+        
     }
+    
+    //notify("Coming soon", "warning")
 }
 
 function notify(mensagem, icon) {

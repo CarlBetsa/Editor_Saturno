@@ -1,5 +1,16 @@
 [
-    "preset1.stnpreset",
-    "preset2.stnpreset",
-    "backup_timespace.stnpreset"
+    "AutoWah.stnpreset",
+    "Chorus.stnpreset",
+    "DlySolo.stnpreset",
+    "DualDMod.stnpreset",
+    "Flanger.stnpreset",
+    "Lo-Fi.stnpreset",
+    "MmryPan.stnpreset",
+    "Phaser.stnpreset",
+    "POGDown.stnpreset",
+    "PsycTape.stnpreset",
+    "ReggaeD.stnpreset",
+    "Reverse.stnpreset",
+    "Tremolo.stnpreset",
+    "Vibrato.stnpreset"
 ]

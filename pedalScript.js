@@ -11,7 +11,7 @@ const algorithmData = {
     "Holo Filter": ["Type", "Ressonance", "Tone", "Envelope", "Sensitivity/Range", "Response/Rate"],
     "RetroVerse": ["Sensitivity", "Release"],
     "Memory Man": ["Tone", "Compression", "Grit", "Mod Type ", "Modulation", "Ducking"],
-    "Nebula Swel": ["Sensitivity", "Responce"],
+    "Nebula Swell": ["Sensitivity", "Responce"],
     "WhammyDelay": ["Heel", "Toe", "Tone", "Mode ", "Speed"]
 };
 
@@ -36,7 +36,7 @@ const algorithmStart = {
     "Holo Filter": ["0ms", "80%", "80%", "LPF", "70%", "50%", "RMS", "40%", "50%"],
     "RetroVerse": ["800ms", "80%", "80%", "70%", "50%"],
     "Memory Man": ["200ms", "80%", "80%", "60%", "75%", "0%", "Vibrato", "10%", "10%"],
-    "Nebula Swel": ["0ms", "0%", "80%", "50%", "50%"],
+    "Nebula Swell": ["0ms", "0%", "80%", "50%", "50%"],
     "WhammyDelay": ["600ms", "80%", "80%", "-12", "7", "50%", "Auto", "0%"],
     "SpaceRoom": ["30%", "0ms", "80%", "60%", "80%", "80%", "80%", "75%", "75%"],
     "HALL 9000": ["30%", "0ms", "80%", "40%", "70%", "60%", "60%", "100%", "10%"],
@@ -88,7 +88,7 @@ const parameterRanges = {
     "Tone B": { tipo: "porcentagem", valor_inicial: 0, valor_final: 100, complemento: "%" },
     "Level B": { tipo: "porcentagem", valor_inicial: 0, valor_final: 100, complemento: "%" },
     "Mode": { tipo: "lista", valores: ["Fixed", "Gradual"], complemento: "" },
-    "Mode ": { tipo: "lista", valores: ["Auto", "CC"], complemento: "" },
+    "Mode ": { tipo: "lista", valores: ["CC", "Auto"], complemento: "" },
     "Mode  ": { tipo: "lista", valores: ["Vintage", "Modern"], complemento: "" },
     "Type": { tipo: "lista", valores: ["LPF", "HPF", "BPF"], complemento: "" },
     "Ressonance": { tipo: "porcentagem", valor_inicial: 0, valor_final: 100, complemento: "%" },
@@ -111,7 +111,7 @@ const parameterRanges = {
     // Glassy Delay
     "Speed": { tipo: "porcentagem", valor_inicial: 0, valor_final: 100, complemento: "%" },
     "Depth": { tipo: "porcentagem", valor_inicial: 0, valor_final: 100, complemento: "%" },
-    "Shape": { tipo: "lista", valores: ["Sine", "Triangle", "Square"], complemento: "" },
+    //"Shape": { tipo: "lista", valores: ["Sine", "Triangle", "Square"], complemento: "" },
     "Voices": { tipo: "lista", valores: ["", "", 2, 3, 4, 5], complemento: "" },
     "Stages": { tipo: "lista", valores: ["", "", 2, 3, 4], complemento: "" },
     "Mode    ": { tipo: "lista", valores: ["Vintage", "Modern"], complemento: "" },
@@ -147,7 +147,7 @@ const timeAlg = {
     "Holo Filter": { min: 0, max: 948, start: 400 },
     "RetroVerse": { min: 0, max: 830, start: 400 },
     "Memory Man": { min: 0, max: 940, start: 400 },
-    "Nebula Swel": { min: 0, max: 948, start: 400 },
+    "Nebula Swell": { min: 0, max: 948, start: 400 },
     //"WhammyDelay": { min: 63, max: 823, start: 400 }
     "WhammyDelay": { min: 63, max: 823, start: 400 },
     "SpaceRoom": { min: 0, max: 900, start: 400 },
@@ -183,7 +183,7 @@ const modTypeDataStart = {
 const modTypeValues = {
     "Speed": { tipo: "porcentagem", valor_inicial: 0, valor_final: 100, complemento: "%" },
     "Depth": { tipo: "porcentagem", valor_inicial: 0, valor_final: 100, complemento: "%" },
-    "Shape": { tipo: "lista", valores: ["Sine", "Triangle", "Square"], complemento: "" },
+    "Shape": { tipo: "lista", valores: ["Triangle", "Square", "Sine"], complemento: "" },
     "Voices": { tipo: "lista", valores: ["", "", 2, 3, 4, 5], complemento: "" },
     "Stages": { tipo: "lista", valores: ["", "", 2, 3, 4], complemento: "" },
     "Mode    ": { tipo: "lista", valores: ["Vintage", "Modern"], complemento: "" },
@@ -696,26 +696,30 @@ async function createPresets() {
 
             if (content && fileName.endsWith(".stnpreset")) {
                 let originalArray;
+                let isBackup;
+                //alert([...content]);
 
                 if (fromSaturnRepo) {
+                    //aqui to enviando o ultimo valor como 0 por algum motivo eu estou perdendo ele na leitura (por hora todos os sons oficiais são 0 então tudo certo)
                     // Converte o texto do github para int
-                    const asciiArray = [];
-                    const byteArray = new Uint8Array(uint8); // <- transforma em array de bytes direto
+                    const byteArray = new Uint8Array(uint8); // já é array de bytes
+                    const fullArray = new Uint8Array(byteArray); // cópia (poderia até usar byteArray direto)
 
-                    for (let i = 0; i < byteArray.length; i++) {
-                        asciiArray.push(byteArray[i]);
-                    }
+                    // Decodifica ignorando o primeiro byte
+                    const decoded = decode(fullArray.slice(1));
 
-                    const fullArray = new Uint8Array(asciiArray);
-                    originalArray = decode(fullArray.slice(1));
+                    // Cria originalArray com +0 no final
+                    originalArray = Uint8Array.from([...decoded, 0]);
 
                     //alert([...byteArray]);     // correto
                     //alert([...originalArray]); // também correto
                     //alert([...fullArray]);     // idem
-                    //return;
+                    //alert(originalArray.length);
                 } else {
                     const parsed = JSON.parse(content);
                     const fullArray = new Uint8Array(parsed);
+                    isBackup = parsed[0]
+                    //alert(isBackup)
                     originalArray = decode(fullArray.slice(1));
                 }
 
@@ -741,16 +745,18 @@ async function createPresets() {
                 console.log(`Conteúdo do arquivo ${fileName}:`, originalArray);
                 window.lastPresetArray = originalArray;
 
+                patchChanged = false;
+
                 const partes = [];
-                let header = fileName.toLowerCase().includes("backup") ? [...originalArray.slice(0, 9)] : [i, ...originalArray.slice(0, 9)];
+                let header = isBackup == 103 ? [...originalArray.slice(0, 9)] : [i, ...originalArray.slice(0, 9)];
                 //alert (header)
                 let resto = originalArray.slice(9);
-
+                console.log(resto)
                 
 
                 // Envia as mensagens (você pode substituir alert por sendMessage depois)
                 //alert(`Header: [${[...header]}]`);
-                const command = fileName.toLowerCase().includes("backup") ? 0x4D : 0x4B;
+                const command = isBackup == 103 ? 0x4D : 0x4B;
                 if (command == 0x4D) {
                     document.getElementById("loading-overlay").style.display = "flex";
                     // Reparte a informação em partes de até 44 bytes
@@ -761,16 +767,17 @@ async function createPresets() {
                     }
                     //alert(partes[partes.length-1].length)
                     sendMessage([0xF0,command,0x00, 0x00,...header,0xF7]);
-                    //alert([0xF0,command,0x00,...header,0xF0]);
+                    //alert([0xF0,command,0x00, 0x00,...header,0xF7]);
                     //console.log([0xF0,command,0x00, 0x00,...header,0xF7]);
                     for (let index = 0; index < partes.length; index++) {
                         //alert(`Parte ${index + 1}: [${[...parte]}]`);
-                        //alert([0xF0,command,index + 1,...parte,0xF7]);
+                        //alert([0xF0,command,(index+1) % 128,Math.floor((index+1)/128),...partes[index],0xF7]);
                         //console.log([0xF0,command,(index+1) % 128,Math.floor(index/128),...partes[i],0xF7])
-                        aux = 1 % 25;
+                        /*aux = 1 % 25;
                         if (aux != 0) {
                             await delay(100);
-                        }
+                        }*/
+                        await delay(10);
                         sendMessage([0xF0,command,(index+1) % 128,Math.floor((index+1)/128),...partes[index],0xF7]);
                     };
                     sendMessage([0xF0,0x30,0x00,0xF7]);
@@ -828,6 +835,7 @@ function reloadActivePreset() {
 window.reloadActivePreset = reloadActivePreset;
 
 function extractPresets(data) {
+    //alert(data)
     if (data.length !== 33) {
         console.error("O array não possui 33 elementos");
         return;
@@ -1316,6 +1324,24 @@ function createTableRow(name) {
         patchChanged = true;
     });
 
+    // Resetar para o centro com double click (somente para Dry Pan)
+    slider.addEventListener("dblclick", () => {
+        if (nameCell.textContent === "Dry Pan") {
+            slider.value = 0;
+            valueCell.textContent = "Center";
+            valueCell.style.color = green;
+            slider.style.background = "white";
+
+            // Recalcula valores para enviar mensagem MIDI
+            const sliders = document.querySelectorAll(".slider");
+            const sliderValues = Array.from(sliders).map(s => parseInt(s.value));
+            sliderValues[1] = sliderValues[1] + 100; // Dry Pan tratado como type 0
+            const [lsb, msb] = BinaryOperationSend(sliderValues[1], 4);
+            sendMessage([0xf0, 0x34, 0, sliderValues[0], lsb, msb, 0xf7]);
+            patchChanged = true;
+        }
+    });
+
     row.appendChild(nameCell);
     row.appendChild(sliderCell);
     row.appendChild(valueCell);
@@ -1390,7 +1416,7 @@ function updateSliders(value1, value2) {
 // Função para criar as tabelas DSP
 function createIndividualTable(number, currentAlgorithmIndex) {
     const algorithmValues = nomeControladora == "timespace" ? [
-        "OFF", "Glassy Delay", "Bucket Brigade", "TransistorTape", "Quantum Pitch", "Holo Filter", "RetroVerse", "Memory Man", "Nebula Swel", "WhammyDelay"
+        "OFF", "Glassy Delay", "Bucket Brigade", "TransistorTape", "Quantum Pitch", "Holo Filter", "RetroVerse", "Memory Man", "Nebula Swell", "WhammyDelay"
     ] : [
         "OFF", "SpaceRoom", "HALL 9000", "Star Plate", "GravitySprings", "SunlightWings", "Dark Galaxy", "Sci-fi Shimmer", "Frosted Verb", "Spatial Vowels", "Stellar Swell"
     ];
@@ -2229,7 +2255,7 @@ function updateDSPButtons(tableNum, buttonTexts) {
         case 5: algorithmDisplay.textContent = 'Holo Filter'; break;
         case 6: algorithmDisplay.textContent = 'RetroVerse'; break;
         case 7: algorithmDisplay.textContent = 'Memory Man'; break;
-        case 8: algorithmDisplay.textContent = 'Nebula Swel'; break;
+        case 8: algorithmDisplay.textContent = 'Nebula Swell'; break;
         case 9: algorithmDisplay.textContent = 'WhammyDelay'; break;
     }
 
@@ -3538,13 +3564,47 @@ function extractCommandCenterData(tableElement) {
         return options.indexOf(normalized) !== -1 ? options.indexOf(normalized) : 0;
     }
 
+    function charToPresetValue(c) {
+        if (!c || c === '\0') return 0;
+        else if (c === ' ') return 0; // case 0
+
+        const code = c.charCodeAt(0);
+
+        // A-Z
+        if (code >= 65 && code <= 90) {
+            return code - 65 + 1; // 1...26
+        }
+        // a-z
+        else if (code >= 97 && code <= 122) {
+            return code - 97 + 27; // 27...52
+        }
+        // 0-9
+        else if (code >= 48 && code <= 57) {
+            return code - 48 + 53; // 53...62
+        }
+        // ! " # $ % & '
+        else if (code >= 33 && code <= 39) {
+            return code - 33 + 63; // 63...69
+        }
+        // * +
+        else if (code >= 42 && code <= 43) {
+            return code - 42 + 70; // 70...71
+        }
+        // -
+        else if (code === 45) return 72;
+        // _
+        else if (code === 95) return 73;
+        // ? @
+        else if (code >= 63 && code <= 64) {
+            return code - 63 + 74; // 74...75
+        }
+        else return 0;
+    }
+
     function getAsciiFromInput(input) {
         const text = input?.value || "";
         const padded = text.padEnd(4, '\0').slice(0, 4);
-        return Array.from(padded).map(c => {
-            if (!c || c === ' ' || c === '\0') return 0;
-            return c.charCodeAt(0) - 64;
-        });
+        return Array.from(padded).map(charToPresetValue);
     }
 
     function getValueFromSlider(slider) {
